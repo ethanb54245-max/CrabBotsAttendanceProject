@@ -1,2 +1,0 @@
-# CrabBotsFlockProject
-CrabBots Flock Project
