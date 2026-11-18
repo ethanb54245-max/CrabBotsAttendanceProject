@@ -1,0 +1,6 @@
+data/
+member_photos/
+models/*.onnx
+__pycache__/
+*.pyc
+.venv/
