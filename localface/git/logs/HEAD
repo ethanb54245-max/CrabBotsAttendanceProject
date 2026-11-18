@@ -1,4 +1,0 @@
-0000000000000000000000000000000000000000 92607e6b6446575240f169e0bddfadddb5affdc3 LocalFace <localface@example.com> 1794882509 +0000	commit (initial): Initial commit: consent-based local face recognition
-92607e6b6446575240f169e0bddfadddb5affdc3 b9f0319fdc59991563c6649622ee665fcf05de22 LocalFace <localface@example.com> 1794955951 +0000	commit: v0.2.0: edge-padded detection, faster/stickier ID, HUD redesign, fullscreen, guided enrollment
-b9f0319fdc59991563c6649622ee665fcf05de22 e324d71d0523d602367b81f66f86ddee06309f41 LocalFace <localface@example.com> 1794957458 +0000	commit: v0.3.0: sign-up kiosk, photo-folder import, attendance reports
-e324d71d0523d602367b81f66f86ddee06309f41 3529c0b9f92796193e6fb8b3b97d0d09d5f93b3a LocalFace <localface@example.com> 1794967742 +0000	commit: v0.3.1: robust image loading with clear errors
