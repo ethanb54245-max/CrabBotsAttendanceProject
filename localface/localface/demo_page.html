@@ -1,0 +1,786 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LocalFace</title>
+<style>
+:root{--bg:#0f1216;--panel:#171b21;--panel2:#1f252d;--line:#2a313b;--ink:#f1f4f8;--dim:#9aa5b4;
+--ok:#6ee16e;--warn:#ffa646;--bad:#ff6b6b;--blue:#4aa8ff;--r:16px}
+*{box-sizing:border-box}[hidden]{display:none!important}
+html{color-scheme:dark}
+body{margin:0;min-height:100vh;color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+background:radial-gradient(1100px 560px at 15% -10%,#1d2733 0,var(--bg) 62%)}
+header{display:flex;align-items:center;gap:14px;padding:16px 28px;border-bottom:1px solid var(--line);
+background:rgba(15,18,22,.78);backdrop-filter:blur(10px);position:sticky;top:0;z-index:5}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:19px;letter-spacing:.5px}
+.dot{width:11px;height:11px;border-radius:50%;background:var(--ok);box-shadow:0 0 12px var(--ok)}
+.tag{color:var(--dim);font-size:13px}.spacer{flex:1}
+.chip{padding:5px 12px;border:1px solid var(--line);border-radius:999px;color:var(--dim);font-size:13px;background:var(--panel)}
+main{max-width:1240px;margin:0 auto;padding:26px 28px 60px;display:grid;grid-template-columns:minmax(0,1.65fr) minmax(300px,1fr);gap:22px;align-items:start}
+@media(max-width:900px){main{grid-template-columns:1fr;padding:18px}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:22px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+.card+.card{margin-top:18px}
+h2{margin:0 0 4px;font-size:18px}.sub{margin:0 0 16px;color:var(--dim);font-size:14px}
+.drop{border:2px dashed #3a4452;border-radius:14px;padding:34px 18px;text-align:center;cursor:pointer;
+transition:.18s;background:var(--panel2);outline:none}
+.drop:hover,.drop:focus-visible,.drop.over{border-color:var(--ok);background:#1d2a22;transform:translateY(-1px)}
+.drop svg{width:44px;height:44px;stroke:var(--dim);margin-bottom:8px}
+.drop.over svg,.drop:hover svg{stroke:var(--ok)}
+.drop b{display:block;font-size:16px}.drop span{color:var(--dim);font-size:13px}
+.drop.small{padding:16px}.drop.small svg{width:30px;height:30px;margin-bottom:2px}
+.drop img{max-height:120px;border-radius:10px;display:block;margin:0 auto 6px}
+.notice{margin-top:14px;padding:12px 14px;border-radius:12px;background:#2b2314;border:1px solid #5a4620;color:#ffd699;font-size:14px}
+.resultwrap{margin-top:18px;display:grid;gap:16px}
+#out{max-width:100%;max-height:460px;width:auto;margin:0 auto;border-radius:12px;border:1px solid var(--line);display:block}
+.facecard{display:flex;gap:14px;align-items:center;padding:12px;border-radius:14px;background:var(--panel2);border:1px solid var(--line);flex-wrap:wrap}
+.facecard img{width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--line)}
+.facecard.ok img{border-color:var(--ok)}.facecard.no img{border-color:var(--warn)}
+.fc-main{flex:1;min-width:180px}.fc-name{font-size:19px;font-weight:700}
+.fc-sub{color:var(--dim);font-size:13px}
+.bar{height:7px;border-radius:99px;background:#2d3540;margin-top:7px;overflow:hidden;max-width:240px}
+.bar i{display:block;height:100%;background:var(--ok);border-radius:99px}
+.addform{flex-basis:100%;display:grid;gap:8px;padding-top:6px;border-top:1px solid var(--line)}
+input[type=text],input[type=password]{width:100%;padding:11px 13px;border-radius:10px;border:1px solid var(--line);background:#12161b;color:var(--ink);font:inherit}
+input[type=text]:focus,input[type=password]:focus{outline:2px solid var(--ok);outline-offset:0;border-color:transparent}
+label.check{display:flex;gap:9px;align-items:flex-start;color:var(--dim);font-size:13px;cursor:pointer}
+label.check input{margin-top:3px;accent-color:var(--ok)}
+button{font:inherit;cursor:pointer;border:0;border-radius:10px;padding:11px 16px;font-weight:600;color:#0d1a0d;background:var(--ok);transition:.15s}
+button:hover:not(:disabled){filter:brightness(1.08);transform:translateY(-1px)}
+button:disabled{opacity:.4;cursor:not-allowed}
+button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+button.ghost:hover:not(:disabled){border-color:var(--ok)}
+.msg{font-size:13px;margin-top:8px;color:var(--dim)}.msg.bad{color:var(--bad)}.msg.good{color:var(--ok)}
+ul{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+h2+ul{margin-top:14px}
+li.person{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:12px;background:var(--panel2);border:1px solid var(--line)}
+.av{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:13px;background:#25402b;color:var(--ok)}
+.pn{flex:1;min-width:0}.pn b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pn span{color:var(--dim);font-size:12px}
+li.person button{padding:4px 10px;background:transparent;color:var(--dim);border:1px solid var(--line);font-weight:500}
+li.person button:hover{color:var(--bad);border-color:var(--bad)}
+.empty{color:var(--dim);font-size:14px;padding:6px 2px}
+.spin{display:none;position:fixed;inset:0;background:rgba(10,12,15,.55);place-items:center;z-index:20}
+.spin.on{display:grid}.spin div{width:46px;height:46px;border:4px solid #33404d;border-top-color:var(--ok);border-radius:50%;animation:r .8s linear infinite}
+@keyframes r{to{transform:rotate(360deg)}}
+#toasts{position:fixed;right:20px;bottom:20px;display:grid;gap:10px;z-index:30}
+.toast{padding:12px 16px;border-radius:12px;background:#1d2530;border:1px solid var(--line);box-shadow:0 8px 24px rgba(0,0,0,.4);max-width:340px;animation:t .25s}
+.toast.good{border-color:var(--ok)}.toast.bad{border-color:var(--bad)}
+@keyframes t{from{opacity:0;transform:translateY(8px)}}
+.modal{position:fixed;inset:0;background:rgba(8,10,13,.86);display:grid;place-items:center;z-index:40;padding:16px}
+.mbox{position:relative;width:min(760px,100%);background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:26px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.x{position:absolute;right:14px;top:12px;background:transparent;color:var(--dim);border:0;font-size:26px;line-height:1;padding:4px 10px}
+.prompt{font-size:26px;font-weight:700;text-align:center}
+.vwrap{position:relative;margin:14px auto 0;max-height:62vh;border-radius:16px;overflow:hidden;background:#000;transform:scaleX(-1);border:2px solid var(--line)}
+.vwrap video{display:block;width:100%;max-height:62vh;object-fit:cover}
+.vwrap canvas{position:absolute;inset:0;width:100%;height:100%}
+.oval{position:absolute;left:50%;top:50%;width:42%;height:82%;transform:translate(-50%,-50%);border:2px dashed rgba(255,255,255,.35);border-radius:50%;pointer-events:none}
+.vwrap.flash{animation:fl .45s}
+@keyframes fl{0%{box-shadow:inset 0 0 0 10px var(--ok)}100%{box-shadow:inset 0 0 0 0 transparent}}
+.prog{height:9px;background:#2d3540;border-radius:99px;margin-top:14px;overflow:hidden}
+.prog i{display:block;height:100%;width:0;background:var(--ok);transition:width .25s}
+.welcome{text-align:center;padding:40px 10px}.welcome b{display:block;font-size:34px;color:var(--ok)}
+.nav{display:flex;gap:4px;margin-left:18px;padding:4px;background:var(--panel);border:1px solid var(--line);border-radius:12px}
+.nav button{background:transparent;color:var(--dim);padding:7px 16px;font-weight:600;border-radius:9px}
+.nav button:hover:not(:disabled){color:var(--ink);transform:none;filter:none}
+.nav button.on{background:var(--panel2);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
+@media(max-width:700px){.tag{display:none}.nav{margin-left:6px}.nav button{padding:7px 10px}}
+a.btn{display:inline-block;text-decoration:none;font-weight:600;color:#0d1a0d;background:var(--ok);padding:11px 16px;border-radius:10px;transition:.15s}
+a.btn:hover{filter:brightness(1.08);transform:translateY(-1px)}
+button.danger{background:transparent;color:var(--bad);border:1px solid #6a2f33}
+button.danger:hover:not(:disabled){background:#2a1517;border-color:var(--bad)}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap}
+th{color:var(--dim);font-weight:600;font-size:12px}th:first-child,td:first-child{text-align:left}
+td.yes{color:var(--ok);font-weight:700}td.no{color:#4b5663}
+.improw{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
+.impst{font-size:12px;color:var(--dim);max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.impst.good{color:var(--ok)}.impst.bad{color:var(--bad)}
+.gone{display:none;position:fixed;inset:0;z-index:100;background:var(--bg);place-items:center;text-align:center;padding:24px}
+.gone.on{display:grid}.gone b{display:block;font-size:28px;margin-bottom:8px}.gone p{color:var(--dim);margin:0}
+.liveview{position:relative;width:100%;aspect-ratio:16/9;background:#000;border-radius:14px;overflow:hidden;border:1px solid var(--line)}
+.liveview video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;transform:scaleX(-1);background:#000}
+.liveov{position:absolute;pointer-events:none}
+.liveidle{position:absolute;inset:0;display:grid;place-items:center;background:radial-gradient(circle at 50% 40%,#1c2630,#0b0e12)}
+.livehud{position:absolute;left:12px;top:12px;z-index:3;display:flex;gap:10px;align-items:center;padding:6px 12px;border-radius:999px;background:rgba(15,18,22,.72);backdrop-filter:blur(6px);font-size:13px}
+.livehud span:last-child{color:var(--dim)}
+.livectl{position:absolute;right:12px;top:12px;z-index:3;display:flex;gap:8px}
+button.sm{padding:6px 13px;font-size:13px;background:rgba(15,18,22,.72);color:var(--ink);border:1px solid rgba(255,255,255,.18);backdrop-filter:blur(6px)}
+.rec{width:9px;height:9px;border-radius:50%;background:#ff5a5a;animation:pulse 1.2s infinite}
+@keyframes pulse{50%{opacity:.3}}
+.liverow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px}
+.liveview:fullscreen{width:100vw;height:100vh;aspect-ratio:auto;border:0;border-radius:0}
+.fbox{position:absolute;border:3px solid var(--ok);border-radius:12px;box-shadow:0 0 0 1px rgba(0,0,0,.4),0 0 18px rgba(110,225,110,.25);transition:left .2s linear,top .2s linear,width .2s linear,height .2s linear}
+.fbox.unknown{border-color:var(--warn);box-shadow:0 0 0 1px rgba(0,0,0,.4),0 0 18px rgba(255,166,70,.25)}
+.fbox.scanning{border-color:#dcdcdc;border-style:dashed;box-shadow:none}
+.flabel{position:absolute;left:-3px;bottom:calc(100% + 8px);display:flex;flex-direction:column;gap:5px;padding:7px 11px;border-radius:10px;background:rgba(18,22,27,.84);backdrop-filter:blur(4px);white-space:nowrap}
+.fbox.below .flabel{bottom:auto;top:calc(100% + 8px)}
+.fname{font-weight:700;font-size:16px;line-height:1.2}
+.fsub{display:flex;gap:8px;align-items:center}
+.fchip{padding:1px 8px;border-radius:99px;font-size:11px;font-weight:700;color:#10151a;background:#9aa5b4}.fchip.walking{background:var(--blue)}
+.fbar{width:48px;height:5px;border-radius:9px;background:#39434f;overflow:hidden}.fbar i{display:block;height:100%;background:var(--ok)}
+.spacer{flex:1}
+.pill.warn{background:#3a2b12;color:var(--warn)}.pill.blue{background:#16304a;color:var(--blue)}
+.pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;background:#25402b;color:var(--ok);margin-left:6px}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><span class="dot"></span>LocalFace</div>
+  <nav class="nav" id="nav">
+    <button data-t="recognize" class="on">Recognize</button>
+    <button data-t="people">People</button>
+    <button data-t="attendance">Attendance</button>
+  </nav>
+  <span class="spacer"></span>
+  <span class="tag">Runs on this computer only</span>
+  <span class="chip" id="count">0 enrolled</span>
+</header>
+
+<main data-tab="recognize">
+  <section>
+    <div class="card" id="livecard">
+      <h2>Live camera <span class="pill" id="livepill" hidden>live</span></h2>
+      <p class="sub">Recognizes enrolled people as they walk by or stand still, right here on this page, and takes attendance.</p>
+      <div class="liveview" id="liveview">
+        <video id="livevid" autoplay playsinline muted></video>
+        <div class="liveov" id="liveov"></div>
+        <div class="livehud" id="livehud" hidden><span class="rec"></span><b>LIVE</b><span id="livestats"></span></div>
+        <div class="livectl" id="livectl" hidden><button class="sm" id="livefs2">Fullscreen</button><button class="sm" id="livestop2">Stop</button></div>
+        <div class="liveidle" id="liveidle"><button id="livestart">Start live camera</button></div>
+      </div>
+      <div class="liverow">
+        <button id="livestop" class="ghost" hidden>Stop</button>
+        <button id="livefs" class="ghost">Fullscreen</button>
+        <label class="check" style="align-items:center"><input type="checkbox" id="liverecord" checked><span>Record attendance</span></label>
+        <span class="spacer"></span>
+        <button id="live" class="ghost">Open in its own window</button>
+      </div>
+      <div class="msg" id="livemsg"></div>
+    </div>
+
+    <div class="card">
+      <h2>Who is this?</h2>
+      <p class="sub">Drop a clear photo here, click to choose one, or paste it with Ctrl+V. Results appear instantly.</p>
+      <div class="drop" id="drop" tabindex="0" role="button" aria-label="Choose a photo to identify">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16l4-4 4 4 3-3 5 5"/><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="9" r="1.5"/></svg>
+        <b>Drop a photo here</b><span>JPG, PNG, WEBP or BMP</span>
+      </div>
+      <input type="file" id="file" accept="image/*" hidden>
+      <div class="notice" id="notice" hidden>Nobody is enrolled yet. Add a person on the right, or drop a photo and name the face you find.</div>
+      <div class="resultwrap" id="result" hidden>
+        <div id="faces" style="display:grid;gap:12px"></div>
+        <img id="out" alt="Annotated result">
+      </div>
+    </div>
+  </section>
+  <aside>
+    <div class="card">
+      <h2>Sign up with the camera</h2>
+      <p class="sub">Like the kiosk: the person sees themselves on screen, follows a few head-pose prompts, and is enrolled in about 6 seconds.</p>
+      <button id="camopen">Sign up with camera</button>
+    </div>
+
+    
+  
+
+    <div class="card">
+      <h2>Just checked in <span class="pill" id="feedcount">0</span></h2>
+      <ul id="feed" style="margin-top:12px"></ul>
+    </div>
+  </aside>
+</main>
+
+<main data-tab="people" hidden>
+  <section>
+    <div class="card">
+      <h2>People</h2>
+      <ul id="people"></ul>
+    </div>
+
+    <div class="card">
+      <h2>Add a person</h2>
+      <p class="sub">Enroll someone from a clear, front-facing photo.</p>
+      <div class="drop small" id="adddrop" tabindex="0" role="button" aria-label="Choose a photo of the person to add">
+        <div id="addprev"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg></div>
+        <b id="addlabel">Choose a photo</b>
+      </div>
+      <input type="file" id="addfile" accept="image/*" hidden>
+      <div style="display:grid;gap:10px;margin-top:12px">
+        <input type="text" id="name" placeholder="Full name" maxlength="40" autocomplete="off">
+        <label class="check"><input type="checkbox" id="consent"><span>This person has agreed to be enrolled. Only a numeric face template is saved on this computer, not the photo.</span></label>
+        <button id="addbtn" disabled>Add person</button>
+      </div>
+      <div class="msg" id="addmsg"></div>
+    </div>
+  </section>
+  <aside>
+    <div class="card">
+      <h2>Import many photos</h2>
+      <p class="sub">Choose several photos named like <b>Ethan Badoud.jpg</b>. A trailing number (<b>Ethan Badoud 2.jpg</b>) is ignored, so one person can have several photos. Check the names, then import.</p>
+      <div class="drop small" id="impdrop" tabindex="0" role="button" aria-label="Choose photos to import">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3"/></svg>
+        <b>Choose or drop photos</b>
+      </div>
+      <input type="file" id="impfile" accept="image/*" multiple hidden>
+      <div id="implist" style="margin-top:12px;display:grid;gap:8px"></div>
+      <label class="check" id="impconsentrow" hidden style="margin-top:12px"><input type="checkbox" id="impconsent"><span>Everyone listed has agreed to be enrolled.</span></label>
+      <button id="impgo" hidden style="margin-top:10px;width:100%">Import</button>
+    </div>
+
+    <div class="card" id="admincard">
+      <h2>Admin PIN <span class="pill warn" id="adminpill">off</span></h2>
+      <p class="sub" id="admintext"></p>
+      <div id="adminbtns" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+    </div>
+
+    <div class="card">
+      <h2>Data and privacy</h2>
+      <p class="sub">Face templates and attendance are stored only in the <b>data</b> folder next to this app. Nothing is sent anywhere, and photos are never saved.</p>
+      <button class="danger" id="purge">Delete all face data and attendance</button>
+    </div>
+  </aside>
+</main>
+
+<main data-tab="attendance" hidden>
+  <section>
+    <div class="card">
+      <h2>Today's attendance <span class="pill" id="attcount">0/0</span></h2>
+      <ul id="attn" style="margin-top:12px"></ul>
+    </div>
+
+    <div class="card">
+      <h2>All meetings</h2>
+      <p class="sub">Who showed up on each day the camera ran.</p>
+      <div class="tablewrap" id="hist"></div>
+    </div>
+  </section>
+  <aside>
+    <div class="card">
+      <h2>Export</h2>
+      <p class="sub">Download every check-in (date, name, first and last seen) as a CSV file for Excel or Google Sheets.</p>
+      <a class="btn" href="/api/attendance.csv" download="attendance.csv">Download CSV</a>
+    </div>
+  </aside>
+</main>
+
+<div class="modal" id="modal" hidden>
+  <div class="mbox">
+    <button class="x" id="mclose" aria-label="Close">&times;</button>
+    <div id="phase1">
+      <h2>Sign up with the camera</h2>
+      <p class="sub">Type your name, agree, then follow the on-screen prompts.</p>
+      <div style="display:grid;gap:12px">
+        <input type="text" id="camname" placeholder="Your full name" maxlength="40" autocomplete="off">
+        <label class="check"><input type="checkbox" id="camconsent"><span>I agree to have my face enrolled. A numeric face template (not a photo) is saved on this computer for recognition and attendance. I can ask an officer to delete it any time.</span></label>
+        <button id="camstart" disabled>Start camera</button>
+      </div>
+      <div class="msg" id="cammsg"></div>
+    </div>
+    <div id="phase2" hidden>
+      <div class="prompt" id="campose">Look straight at the camera</div>
+      <div class="sub" id="camstep" style="text-align:center;margin:4px 0 0">Step 1 of 5</div>
+      <div class="vwrap" id="vwrap"><video id="vid" autoplay playsinline muted></video><canvas id="ov"></canvas><div class="oval"></div></div>
+      <div class="prog"><i id="progbar"></i></div>
+      <div class="msg" id="camstatus" style="text-align:center">Starting camera...</div>
+    </div>
+    <div id="phase3" class="welcome" hidden><b id="welcomename">Welcome!</b><p class="sub">You're enrolled and will be recognized right away.</p></div>
+  </div>
+</div>
+
+<div class="modal" id="pinmodal" hidden>
+  <div class="mbox" style="width:min(440px,100%)">
+    <button class="x" id="pinclose" aria-label="Close">&times;</button>
+    <h2 id="pintitle"></h2>
+    <p class="sub" id="pintext"></p>
+    <div style="display:grid;gap:10px">
+      <input type="password" id="pin1" autocomplete="off">
+      <input type="password" id="pin2" autocomplete="off">
+      <input type="password" id="pin3" autocomplete="off">
+      <button id="pinok">OK</button>
+    </div>
+    <div class="msg bad" id="pinmsg"></div>
+  </div>
+</div>
+
+<div class="gone" id="gone"><div><b>LocalFace has stopped</b><p>You can close this page. To use it again, start LocalFace and reopen it.</p></div></div>
+
+<div class="spin" id="spin"><div></div></div>
+<div id="toasts"></div>
+
+<script>
+(()=>{
+const $=s=>document.querySelector(s);
+let adminToken='';
+const H=k=>({'X-LocalFace':'1',...(adminToken?{'X-LocalFace-Admin':adminToken}:{}),...(k||{})});
+const JSON_H={'Content-Type':'application/json'};
+let lastBlob=null,addFile=null;
+
+/* ---------- if the app is stopped (e.g. its PowerShell window is closed), say so and close this page ---------- */
+let gone=false;
+function serverGone(){
+  if(gone)return;gone=true;
+  document.title='LocalFace (stopped)';
+  try{window.close()}catch(e){}                                   /* works in Chrome/Edge for pages opened this way */
+  setTimeout(()=>$('#gone').classList.add('on'),300);             /* fallback if the browser refuses */
+}
+const ping=()=>fetch('/api/ping').catch(serverGone);
+setInterval(ping,5000);
+try{const es=new EventSource('/api/events');es.onerror=()=>setTimeout(ping,400)}catch(e){}
+
+async function api(method,path,body,extra){
+  const r=await fetch(path,{method,body,headers:H(extra)});
+  let j={};try{j=await r.json()}catch(e){}
+  if(!r.ok){const err=new Error(j.error||('Request failed ('+r.status+')'));err.status=r.status;throw err}
+  return j;
+}
+function toast(msg,kind){
+  const t=document.createElement('div');t.className='toast '+(kind||'');t.textContent=msg;
+  $('#toasts').appendChild(t);setTimeout(()=>t.remove(),4500);
+}
+const spin=on=>$('#spin').classList.toggle('on',on);
+const initials=n=>n.split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join('');
+
+function makeDrop(el,input,onFile,multi){
+  const give=fs=>{if(!fs.length)return;multi?onFile([...fs]):onFile(fs[0])};
+  el.addEventListener('click',()=>input.click());
+  el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();input.click()}});
+  ['dragenter','dragover'].forEach(t=>el.addEventListener(t,e=>{e.preventDefault();el.classList.add('over')}));
+  ['dragleave','drop'].forEach(t=>el.addEventListener(t,e=>{e.preventDefault();el.classList.remove('over')}));
+  el.addEventListener('drop',e=>give(e.dataTransfer.files));
+  input.addEventListener('change',()=>{give(input.files);input.value=''});
+}
+['dragover','drop'].forEach(t=>window.addEventListener(t,e=>e.preventDefault()));
+
+/* ---------- identify ---------- */
+async function identify(blob){
+  lastBlob=blob;spin(true);
+  try{
+    const j=await api('POST','/api/identify',blob,{'Content-Type':'application/octet-stream'});
+    renderResult(j);
+  }catch(e){toast(e.message,'bad')}finally{spin(false)}
+}
+function renderResult(j){
+  $('#out').src=j.image;$('#result').hidden=false;$('#notice').hidden=j.enrolled>0;
+  const box=$('#faces');box.textContent='';
+  if(!j.faces.length){
+    const d=document.createElement('div');d.className='notice';
+    d.textContent='No face found. Try a clearer, closer, front-facing photo.';box.appendChild(d);return;
+  }
+  j.faces.forEach(f=>box.appendChild(faceCard(f)));
+  $('#result').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function faceCard(f){
+  const ok=!!f.name,c=document.createElement('div');c.className='facecard '+(ok?'ok':'no');
+  if(f.thumb){const im=document.createElement('img');im.src=f.thumb;im.alt='';c.appendChild(im)}
+  const m=document.createElement('div');m.className='fc-main';
+  const n=document.createElement('div');n.className='fc-name';n.textContent=ok?f.name:'Unknown';
+  const s=document.createElement('div');s.className='fc-sub';
+  s.textContent=ok?((f.score>=0.5?'Strong match':'Match')+' · similarity '+f.score.toFixed(2)):'No enrolled person matches this face';
+  m.append(n,s);
+  if(ok){const b=document.createElement('div');b.className='bar';const i=document.createElement('i');
+    i.style.width=Math.max(4,Math.min(100,f.score*100))+'%';b.appendChild(i);m.appendChild(b)}
+  c.appendChild(m);
+  if(!ok){
+    const form=document.createElement('div');form.className='addform';
+    const inp=document.createElement('input');inp.type='text';inp.placeholder='Name this person to add them';inp.maxLength=40;
+    const lab=document.createElement('label');lab.className='check';
+    const cb=document.createElement('input');cb.type='checkbox';
+    const sp=document.createElement('span');sp.textContent='This person has agreed to be enrolled.';lab.append(cb,sp);
+    const btn=document.createElement('button');btn.textContent='Add and recognize';btn.disabled=true;
+    const upd=()=>btn.disabled=!(inp.value.trim()&&cb.checked);inp.oninput=upd;cb.onchange=upd;
+    btn.onclick=async()=>{
+      spin(true);
+      try{
+        await api('POST','/api/enroll?name='+encodeURIComponent(inp.value.trim())+'&consent=1&face='+f.index,lastBlob,{'Content-Type':'application/octet-stream'});
+        toast('Added '+inp.value.trim(),'good');refresh();spin(false);await identify(lastBlob);
+      }catch(e){spin(false);toast(e.message,'bad')}
+    };
+    form.append(inp,lab,btn);c.appendChild(form);
+  }
+  return c;
+}
+makeDrop($('#drop'),$('#file'),f=>{if(!f.type.startsWith('image/')&&!/\.(jpe?g|png|bmp|webp)$/i.test(f.name))return toast('Please choose an image file.','bad');identify(f)});
+document.addEventListener('paste',e=>{
+  const it=[...(e.clipboardData?.items||[])].find(i=>i.type.startsWith('image/'));
+  if(it)identify(it.getAsFile());
+});
+
+/* ---------- add person ---------- */
+function updAdd(){$('#addbtn').disabled=!(addFile&&$('#name').value.trim()&&$('#consent').checked)}
+makeDrop($('#adddrop'),$('#addfile'),f=>{
+  addFile=f;const p=$('#addprev');p.textContent='';
+  const im=document.createElement('img');im.src=URL.createObjectURL(f);p.appendChild(im);
+  $('#addlabel').textContent=f.name;updAdd();
+});
+$('#name').addEventListener('input',updAdd);$('#consent').addEventListener('change',updAdd);
+$('#addbtn').addEventListener('click',async()=>{
+  const name=$('#name').value.trim(),f=addFile;spin(true);$('#addmsg').textContent='';$('#addmsg').className='msg';
+  try{
+    await api('POST','/api/enroll?name='+encodeURIComponent(name)+'&consent=1',f,{'Content-Type':'application/octet-stream'});
+    toast('Added '+name+'. Recognizing now...','good');
+    addFile=null;$('#name').value='';$('#consent').checked=false;$('#addlabel').textContent='Choose a photo';
+    $('#addprev').innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>';
+    updAdd();refresh();spin(false);await identify(f);
+  }catch(e){spin(false);$('#addmsg').textContent=e.message;$('#addmsg').className='msg bad'}
+});
+
+/* ---------- camera sign-up ---------- */
+const cam={stream:null,sid:null,run:false};
+const modal=$('#modal');
+function phase(n){[1,2,3].forEach(i=>$('#phase'+i).hidden=i!==n)}
+function camMsg(t,k){$('#cammsg').textContent=t||'';$('#cammsg').className='msg '+(k||'')}
+function stopCam(){
+  cam.run=false;
+  if(cam.stream){cam.stream.getTracks().forEach(t=>t.stop());cam.stream=null}
+  $('#vid').srcObject=null;
+}
+function closeModal(){stopCam();modal.hidden=true;phase(1);camMsg('');$('#progbar').style.width='0';
+  if(live.resume){live.resume=false;setTimeout(startLive,500)}}
+function updCamBtn(){$('#camstart').disabled=!($('#camname').value.trim()&&$('#camconsent').checked)}
+$('#camopen').addEventListener('click',async()=>{
+  live.resume=!!live.run;if(live.run)await stopLive();
+  phase(1);camMsg('');$('#camname').value='';$('#camconsent').checked=false;updCamBtn();
+  modal.hidden=false;$('#camname').focus();
+});
+$('#mclose').addEventListener('click',closeModal);
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!modal.hidden)closeModal()});
+$('#camname').addEventListener('input',updCamBtn);$('#camconsent').addEventListener('change',updCamBtn);
+$('#camname').addEventListener('keydown',e=>{if(e.key==='Enter'&&!$('#camstart').disabled)$('#camstart').click()});
+
+function camError(e){
+  const m={NotAllowedError:'Camera permission was blocked. Allow the camera for this page, then try again.',
+    NotFoundError:'No camera was found on this computer.',NotReadableError:'The camera is busy. Close other programs that use it and try again.'};
+  return m[e.name]||e.message||'Could not start the camera.';
+}
+$('#camstart').addEventListener('click',async()=>{
+  $('#camstart').disabled=true;camMsg('Starting...');
+  try{
+    const s=await api('POST','/api/signup/start?name='+encodeURIComponent($('#camname').value.trim())+'&consent=1');
+    cam.sid=s.sid;
+    await new Promise(r=>setTimeout(r,500));            /* let a closing live-camera window release the device */
+    cam.stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720},facingMode:'user'},audio:false});
+    const v=$('#vid');v.srcObject=cam.stream;await v.play();
+    phase(2);cam.run=true;camLoop();
+  }catch(e){stopCam();camMsg(camError(e),'bad');updCamBtn()}
+});
+function drawBox(b,good){
+  const c=$('#ov');c.width=c.clientWidth;c.height=c.clientHeight;
+  const g=c.getContext('2d');g.clearRect(0,0,c.width,c.height);if(!b)return;
+  const x=b[0]*c.width,y=b[1]*c.height,w=b[2]*c.width,h=b[3]*c.height,L=Math.max(14,Math.min(w,h)*.22);
+  g.strokeStyle=good?'#6ee16e':'#ffffff';g.lineWidth=3;g.lineCap='round';
+  [[x,y,1,1],[x+w,y,-1,1],[x,y+h,1,-1],[x+w,y+h,-1,-1]].forEach(([cx,cy,dx,dy])=>{
+    g.beginPath();g.moveTo(cx+dx*L,cy);g.lineTo(cx,cy);g.lineTo(cx,cy+dy*L);g.stroke()});
+}
+async function camLoop(){
+  const v=$('#vid'),c=document.createElement('canvas');
+  while(cam.run){
+    if(v.videoWidth){
+      const w=Math.min(960,v.videoWidth),h=Math.round(v.videoHeight*w/v.videoWidth);
+      c.width=w;c.height=h;c.getContext('2d').drawImage(v,0,0,w,h);
+      const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',0.9));
+      if(!cam.run)break;
+      try{
+        const j=await api('POST','/api/signup/frame?sid='+cam.sid,blob,{'Content-Type':'image/jpeg'});
+        if(!cam.run)break;
+        $('#campose').textContent=j.done?'All done!':j.pose;
+        $('#camstep').textContent=j.done?'':'Step '+Math.min(j.captured+1,j.total)+' of '+j.total;
+        $('#progbar').style.width=(100*j.captured/j.total)+'%';
+        $('#camstatus').textContent=j.message||(j.done?'':'Hold still...');
+        $('#camstatus').className='msg'+(j.message?' bad':' good');
+        drawBox(j.box,!j.message);
+        if(j.flash){const w=$('#vwrap');w.classList.remove('flash');void w.offsetWidth;w.classList.add('flash')}
+        if(j.done){
+          stopCam();phase(3);$('#welcomename').textContent='Welcome, '+j.name+'!';refresh();
+          toast('Enrolled '+j.name,'good');setTimeout(closeModal,2400);break;
+        }
+      }catch(e){stopCam();phase(1);camMsg(e.message,'bad');updCamBtn();break}
+    }
+    await new Promise(r=>setTimeout(r,120));
+  }
+}
+
+/* ---------- live camera in the page ---------- */
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const live={stream:null,sid:null,run:false,boxes:new Map(),aspect:16/9,resume:false,frames:0,t0:0,fps:0};
+const lv=$('#liveview'),lvid=$('#livevid'),lov=$('#liveov');
+function layoutLive(){            /* keep the overlay exactly on top of the visible video picture */
+  const W=lv.clientWidth,H=lv.clientHeight;let w=W,h=W/live.aspect;if(h>H){h=H;w=H*live.aspect}
+  Object.assign(lov.style,{left:((W-w)/2)+'px',top:((H-h)/2)+'px',width:w+'px',height:h+'px'});
+}
+new ResizeObserver(layoutLive).observe(lv);
+lvid.addEventListener('loadedmetadata',()=>{if(lvid.videoWidth){live.aspect=lvid.videoWidth/lvid.videoHeight;lv.style.aspectRatio=live.aspect}layoutLive()});
+document.addEventListener('fullscreenchange',()=>{const t=document.fullscreenElement?'Exit fullscreen':'Fullscreen';$('#livefs').textContent=t;$('#livefs2').textContent=t;layoutLive()});
+
+function makeBox(){
+  const el=document.createElement('div'),lab=document.createElement('div'),name=document.createElement('div'),
+    sub=document.createElement('div'),chip=document.createElement('span'),bar=document.createElement('span'),fill=document.createElement('i');
+  el.className='fbox';lab.className='flabel';name.className='fname';sub.className='fsub';chip.className='fchip';bar.className='fbar';
+  bar.appendChild(fill);sub.append(chip,bar);lab.append(name,sub);el.appendChild(lab);
+  return {el,name,chip,bar,fill};
+}
+const feedItems=[];
+function renderFeed(){
+  const ul=$('#feed');ul.textContent='';$('#feedcount').textContent=feedItems.length;
+  if(!feedItems.length){const d=document.createElement('div');d.className='empty';d.textContent='Nobody yet. Start the live camera to take attendance.';ul.appendChild(d);return}
+  feedItems.forEach(e=>{
+    const li=document.createElement('li');li.className='person';
+    const av=document.createElement('div');av.className='av';av.textContent=initials(e.name);
+    const pn=document.createElement('div');pn.className='pn';const b=document.createElement('b');b.textContent=e.name;
+    const s=document.createElement('span');s.textContent=e.time+(e.motion?' · '+e.motion:'');pn.append(b,s);li.append(av,pn);ul.appendChild(li);
+  });
+}
+renderFeed();
+function renderLive(j){
+  live.frames++;const el=(performance.now()-live.t0)/1000;
+  if(el>1){live.fps=live.frames/el;if(el>5){live.t0=performance.now();live.frames=0}}
+  const seen=new Set();
+  j.tracks.forEach(t=>{
+    seen.add(t.id);let b=live.boxes.get(t.id);
+    if(!b){b=makeBox();lov.appendChild(b.el);live.boxes.set(t.id,b)}
+    const x=1-(t.box[0]+t.box[2]);                         /* mirrored, like a selfie view */
+    Object.assign(b.el.style,{left:(x*100)+'%',top:(t.box[1]*100)+'%',width:(t.box[2]*100)+'%',height:(t.box[3]*100)+'%'});
+    b.el.className='fbox '+t.state+(t.box[1]<0.16?' below':'');
+    b.name.textContent=t.name||(t.state==='scanning'?'Identifying...':'Unknown');
+    b.chip.hidden=!t.motion;b.chip.textContent=t.motion?t.motion.toUpperCase():'';b.chip.className='fchip'+(t.motion==='walking'?' walking':'');
+    b.bar.hidden=!t.name;if(t.name)b.fill.style.width=Math.max(4,Math.min(100,t.score*100))+'%';
+  });
+  live.boxes.forEach((b,id)=>{if(!seen.has(id)){b.el.remove();live.boxes.delete(id)}});
+  $('#livestats').textContent=j.tracks.length+' in view  |  Present '+j.present+'/'+j.enrolled+'  |  '+live.fps.toFixed(0)+' FPS';
+  j.events.forEach(ev=>{feedItems.unshift(ev);feedItems.length=Math.min(feedItems.length,8)});
+  if(j.events.length)renderFeed();
+}
+async function stopLive(){
+  live.run=false;
+  if(live.stream){live.stream.getTracks().forEach(t=>t.stop());live.stream=null}
+  lvid.srcObject=null;
+  const sid=live.sid;live.sid=null;
+  if(sid)api('POST','/api/live/stop?sid='+sid).catch(()=>{});
+  live.boxes.forEach(b=>b.el.remove());live.boxes.clear();
+  $('#liveidle').hidden=false;$('#livehud').hidden=true;$('#livectl').hidden=true;$('#livestop').hidden=true;$('#livepill').hidden=true;$('#liverecord').disabled=false;
+  if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});
+}
+async function startLive(){
+  $('#livemsg').textContent='';$('#livemsg').className='msg';$('#livestart').disabled=true;
+  try{
+    const s=await api('POST','/api/live/start?log='+($('#liverecord').checked?1:0));
+    live.sid=s.sid;
+    await sleep(400);                                       /* let a closing camera window release the device */
+    live.stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720},facingMode:'user'},audio:false});
+    lvid.srcObject=live.stream;await lvid.play();
+    $('#liveidle').hidden=true;$('#livehud').hidden=false;$('#livectl').hidden=false;$('#livestop').hidden=false;$('#livepill').hidden=false;$('#liverecord').disabled=true;
+    live.run=true;live.t0=performance.now();live.frames=0;layoutLive();liveLoop();
+  }catch(e){await stopLive();$('#livemsg').textContent=camError(e);$('#livemsg').className='msg bad'}
+  finally{$('#livestart').disabled=false}
+}
+async function liveLoop(){
+  const c=document.createElement('canvas');
+  while(live.run){
+    if(lvid.videoWidth){
+      const w=Math.min(960,lvid.videoWidth),h=Math.round(lvid.videoHeight*w/lvid.videoWidth);
+      c.width=w;c.height=h;c.getContext('2d').drawImage(lvid,0,0,w,h);
+      const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',0.82));
+      if(!live.run)break;
+      try{
+        const j=await api('POST','/api/live/frame?sid='+live.sid,blob,{'Content-Type':'image/jpeg'});
+        if(!live.run)break;
+        renderLive(j);
+      }catch(e){
+        if(!live.run)break;
+        const msg=e.status===404?'The live camera was stopped because another camera feature took over.':e.message;
+        await stopLive();$('#livemsg').textContent=msg;$('#livemsg').className='msg bad';break;
+      }
+    }
+    await sleep(30);
+  }
+}
+$('#livestart').addEventListener('click',startLive);
+$('#livestop').addEventListener('click',()=>stopLive());
+$('#livestop2').addEventListener('click',()=>stopLive());
+$('#livefs').addEventListener('click',()=>{
+  if(document.fullscreenElement)document.exitFullscreen();
+  else lv.requestFullscreen().catch(()=>toast('Fullscreen is not available in this browser.','bad'));
+});
+$('#livefs2').addEventListener('click',()=>$('#livefs').click());
+lv.addEventListener('dblclick',()=>$('#livefs').click());
+
+/* ---------- separate camera window ---------- */
+$('#live').addEventListener('click',async()=>{
+  try{await stopLive();const j=await api('POST','/api/live');$('#livemsg').textContent=j.message;$('#livemsg').className='msg good'}
+  catch(e){$('#livemsg').textContent=e.message;$('#livemsg').className='msg bad'}
+});
+
+/* ---------- tabs ---------- */
+const TABS=['recognize','people','attendance'];
+function showTab(t){
+  document.querySelectorAll('main[data-tab]').forEach(m=>m.hidden=m.dataset.tab!==t);
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
+  history.replaceState(null,'','#'+t);layoutLive();
+}
+document.querySelectorAll('#nav button').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.t)));
+showTab(TABS.includes(location.hash.slice(1))?location.hash.slice(1):'recognize');
+window.addEventListener('hashchange',()=>{const h=location.hash.slice(1);if(TABS.includes(h))showTab(h)});
+
+/* ---------- bulk import ---------- */
+let impItems=[];
+const nameFromFile=f=>{const stem=f.name.replace(/\.[^.]+$/,'');return stem.replace(/[\s_\-]*\(?\d+\)?$/,'').trim()||stem};
+function updImp(){$('#impgo').disabled=!(impItems.length&&$('#impconsent').checked&&impItems.every(i=>i.name.trim()))}
+function renderImp(){
+  const box=$('#implist');box.textContent='';
+  impItems.forEach(it=>{
+    const row=document.createElement('div');row.className='improw';
+    const inp=document.createElement('input');inp.type='text';inp.value=it.name;inp.maxLength=40;inp.setAttribute('aria-label','Name for '+it.file.name);
+    inp.oninput=()=>{it.name=inp.value;updImp()};
+    const st=document.createElement('span');st.className='impst';st.textContent=it.file.name;st.title=it.file.name;
+    row.append(inp,st);it.st=st;box.appendChild(row);
+  });
+  const has=impItems.length>0;$('#impconsentrow').hidden=!has;$('#impgo').hidden=!has;
+  $('#impconsent').checked=false;
+  $('#impgo').textContent='Import '+impItems.length+' photo'+(impItems.length===1?'':'s');updImp();
+}
+makeDrop($('#impdrop'),$('#impfile'),files=>{
+  impItems=files.filter(f=>f.type.startsWith('image/')||/\.(jpe?g|png|bmp|webp)$/i.test(f.name)).map(f=>({file:f,name:nameFromFile(f)}));
+  if(!impItems.length)toast('Please choose image files.','bad');renderImp();
+},true);
+$('#impconsent').addEventListener('change',updImp);
+$('#impgo').addEventListener('click',async()=>{
+  $('#impgo').disabled=true;let ok=0;
+  for(const it of impItems){
+    it.st.className='impst';it.st.textContent='Importing...';
+    try{await api('POST','/api/enroll?name='+encodeURIComponent(it.name.trim())+'&consent=1',it.file,{'Content-Type':'application/octet-stream'});
+      it.st.textContent='Added';it.st.className='impst good';ok++}
+    catch(e){it.st.textContent=e.message;it.st.title=e.message;it.st.className='impst bad'}
+  }
+  toast('Imported '+ok+' of '+impItems.length,ok===impItems.length?'good':'bad');refresh();
+});
+
+/* ---------- delete everything ---------- */
+$('#purge').addEventListener('click',async()=>{
+  const t=prompt('This permanently deletes every enrolled person and all attendance records.\n\nType DELETE to confirm.');
+  if(t!=='DELETE')return;
+  try{await adminCall(()=>api('POST','/api/purge'));toast('All data deleted','good');$('#result').hidden=true;refresh()}
+  catch(e){if(!e.cancelled)toast(e.message,'bad')}
+});
+
+/* ---------- attendance history ---------- */
+async function loadHistory(){
+  const h=await api('GET','/api/attendance/summary');
+  const box=$('#hist');box.textContent='';
+  if(!h.dates.length){const d=document.createElement('div');d.className='empty';
+    d.textContent='No attendance recorded yet. It appears here once the live camera recognizes people.';box.appendChild(d);return}
+  const t=document.createElement('table'),hr=document.createElement('tr');
+  ['',...h.dates.map(d=>d.slice(5)),'Total'].forEach(x=>{const th=document.createElement('th');th.textContent=x;hr.appendChild(th)});
+  t.appendChild(hr);
+  h.people.forEach(p=>{
+    const tr=document.createElement('tr'),n=document.createElement('td');n.textContent=p.name;tr.appendChild(n);
+    p.days.forEach(y=>{const td=document.createElement('td');td.className=y?'yes':'no';td.textContent=y?'\u2713':'\u00b7';tr.appendChild(td)});
+    const tt=document.createElement('td');tt.textContent=p.total+'/'+h.dates.length;tr.appendChild(tt);t.appendChild(tr);
+  });
+  box.appendChild(t);
+}
+
+/* ---------- admin PIN ---------- */
+function askPin({title,text,fields,ok,validate}){
+  return new Promise(resolve=>{
+    const m=$('#pinmodal'),ins=[$('#pin1'),$('#pin2'),$('#pin3')];
+    $('#pintitle').textContent=title;$('#pintext').textContent=text||'';$('#pinmsg').textContent='';$('#pinok').textContent=ok||'OK';
+    ins.forEach((el,i)=>{el.hidden=i>=fields.length;el.value='';if(i<fields.length){el.placeholder=fields[i];el.setAttribute('aria-label',fields[i])}});
+    m.hidden=false;ins[0].focus();
+    let busy=false;
+    const done=v=>{m.hidden=true;$('#pinok').onclick=null;$('#pinclose').onclick=null;m.onkeydown=null;resolve(v)};
+    const submit=async()=>{
+      if(busy)return;busy=true;
+      const vals=ins.slice(0,fields.length).map(e=>e.value);
+      const err=validate?await validate(vals):null;busy=false;
+      if(err){$('#pinmsg').textContent=err;ins[0].select();return}
+      done(vals);
+    };
+    $('#pinok').onclick=submit;$('#pinclose').onclick=()=>done(null);
+    m.onkeydown=e=>{if(e.key==='Enter')submit();else if(e.key==='Escape')done(null)};
+  });
+}
+async function unlockValidate(v){
+  try{const j=await api('POST','/api/admin/unlock',JSON.stringify({pin:v[0]}),JSON_H);adminToken=j.token;return null}
+  catch(e){return e.message}
+}
+async function adminCall(fn){
+  try{return await fn()}
+  catch(e){
+    if(e.status!==401)throw e;
+    const v=await askPin({title:'Admin PIN',text:'Enter the admin PIN to continue.',fields:['PIN'],ok:'Unlock',validate:unlockValidate});
+    if(!v){const c=new Error('Cancelled');c.cancelled=true;throw c}
+    refreshAdmin();return await fn();
+  }
+}
+async function pinChange(current,next){
+  const j=await api('POST','/api/admin/pin',JSON.stringify({current,new:next}),JSON_H);
+  adminToken=j.token||'';return j;
+}
+function adminBtn(label,cls,fn){const b=document.createElement('button');b.textContent=label;if(cls)b.className=cls;b.onclick=fn;return b}
+async function refreshAdmin(){
+  let st;try{st=await api('GET','/api/admin/status')}catch(e){return}
+  if(!st.unlocked)adminToken='';
+  const pill=$('#adminpill'),txt=$('#admintext'),box=$('#adminbtns');box.textContent='';
+  if(!st.pin_set){
+    pill.textContent='off';pill.className='pill warn';
+    txt.textContent='No PIN is set, so anyone using this app can remove people or delete all data. Set a PIN to protect those actions. Recognizing and signing up stay open to everyone.';
+    box.appendChild(adminBtn('Set a PIN','',async()=>{
+      const v=await askPin({title:'Set an admin PIN',text:'Needed to remove people or delete data. Use at least 4 characters and keep it somewhere safe.',fields:['New PIN','Confirm PIN'],ok:'Set PIN',
+        validate:async v=>{if(v[0].length<4)return 'Use at least 4 characters.';if(v[0]!==v[1])return 'The two PINs do not match.';
+          try{await pinChange('',v[0]);return null}catch(e){return e.message}}});
+      if(v){toast('Admin PIN set','good');refreshAdmin()}
+    }));
+  }else{
+    pill.textContent=st.unlocked?'unlocked':'locked';pill.className='pill '+(st.unlocked?'blue':'');
+    txt.textContent=st.unlocked?('Unlocked for about '+st.minutes_left+' more minute'+(st.minutes_left===1?'':'s')+'. It locks itself after 10 minutes of not being used.')
+      :'Removing people and deleting data need the PIN. Recognizing and signing up stay open to everyone.';
+    if(st.unlocked)box.appendChild(adminBtn('Lock now','',async()=>{await api('POST','/api/admin/lock');adminToken='';refreshAdmin()}));
+    box.appendChild(adminBtn('Change PIN','ghost',async()=>{
+      const v=await askPin({title:'Change admin PIN',fields:['Current PIN','New PIN','Confirm new PIN'],ok:'Change PIN',
+        validate:async v=>{if(v[1].length<4)return 'Use at least 4 characters.';if(v[1]!==v[2])return 'The two new PINs do not match.';
+          try{await pinChange(v[0],v[1]);return null}catch(e){return e.message}}});
+      if(v){toast('Admin PIN changed','good');refreshAdmin()}
+    }));
+    box.appendChild(adminBtn('Remove PIN','danger',async()=>{
+      const v=await askPin({title:'Remove admin PIN',text:'Anyone using the app will be able to delete data.',fields:['Current PIN'],ok:'Remove PIN',
+        validate:async v=>{try{await pinChange(v[0],'');return null}catch(e){return e.message}}});
+      if(v){toast('Admin PIN removed');refreshAdmin()}
+    }));
+  }
+}
+
+/* ---------- people + attendance ---------- */
+async function refresh(){
+  try{
+    const p=await api('GET','/api/people');
+    $('#count').textContent=p.people.length+' enrolled';
+    const ul=$('#people');ul.textContent='';
+    if(!p.people.length){const d=document.createElement('div');d.className='empty';d.textContent='Nobody enrolled yet.';ul.appendChild(d)}
+    p.people.forEach(x=>{
+      const li=document.createElement('li');li.className='person';
+      const av=document.createElement('div');av.className='av';av.textContent=initials(x.name);
+      const pn=document.createElement('div');pn.className='pn';
+      const b=document.createElement('b');b.textContent=x.name;const s=document.createElement('span');s.textContent=x.samples+' sample'+(x.samples===1?'':'s');
+      pn.append(b,s);
+      const rm=document.createElement('button');rm.textContent='Remove';
+      rm.onclick=async()=>{if(!confirm('Remove '+x.name+' and delete their face data?'))return;
+        try{await adminCall(()=>api('DELETE','/api/people?name='+encodeURIComponent(x.name)));toast('Removed '+x.name);refresh()}
+        catch(e){if(!e.cancelled)toast(e.message,'bad')}};
+      li.append(av,pn,rm);ul.appendChild(li);
+    });
+    const a=await api('GET','/api/attendance');
+    $('#attcount').textContent=a.present.length+'/'+a.enrolled;
+    const au=$('#attn');au.textContent='';
+    if(!a.present.length){const d=document.createElement('div');d.className='empty';d.textContent='No check-ins yet today. Open the live camera to take attendance.';au.appendChild(d)}
+    a.present.forEach(x=>{const li=document.createElement('li');li.className='person';
+      const av=document.createElement('div');av.className='av';av.textContent=initials(x.name);
+      const pn=document.createElement('div');pn.className='pn';const b=document.createElement('b');b.textContent=x.name;
+      const s=document.createElement('span');s.textContent='first seen '+x.first;pn.append(b,s);li.append(av,pn);au.appendChild(li)});
+    await loadHistory();
+  }catch(e){}
+}
+refresh();setInterval(refresh,4000);refreshAdmin();setInterval(refreshAdmin,15000);
+})();
+</script>
+</body>
+</html>
